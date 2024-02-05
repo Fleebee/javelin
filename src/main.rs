@@ -652,8 +652,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         #[cfg(target_os = "windows")]
         let sig_file_path = format!(
-            "..\\target\\release\\bundle\\msi\\{}.msi.zip.sig",
-            tauri_config.package.productName
+            "..\\src-tauri\\target\\release\\bundle\\msi\\{}_{}_x64_en-US.msi.zip.sig",
+            tauri_config.package.productName,&new_version
         );
 
         #[cfg(target_os = "macos")]
@@ -690,8 +690,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             tauri_config.package.productName
         ),
         "windows" => format!(
-            "..\\src-tauri\\target\\release\\bundle\\msi\\{}.msi.zip",
-            tauri_config.package.productName
+            "..\\src-tauri\\target\\release\\bundle\\msi\\{}_{}_x64_en-US.msi.zip",
+            tauri_config.package.productName,current_version
         ),
         "linux" => format!(
             "../src-tauri/target/release/bundle/appimage/{}.AppImage.tar.gz", // Assuming you're using deb for Linux
