@@ -34,6 +34,7 @@ An attempt to reduce the amount and location points of data entries and manual u
 - The repo should be cloned into the root dir of your Tauri project, next to src-tauri
 - Inside the tauri_javelin folder , rename sample_tauri_javelin.conf.json to tauri_javelin.conf.json
 - All fields in tauri_javelin.conf.json are required except for gist_id - this will be created if blank
+- You must create a key pair [secret/pub] you can do this by following the instructions in the Tauri docs for Updater
 - From a terminal while in the tauri_javelin dir, run 'cargo run'
 - Type the type of update you will be performing and press Enter, this will increae a digit in the version number
 - Type your update description and press enter - this is added to the Release description and Gist
