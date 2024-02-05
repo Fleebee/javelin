@@ -2,6 +2,8 @@ use chrono::Utc;
 use reqwest::header;
 use reqwest::header::USER_AGENT;
 use reqwest::Client;
+use reqwest::StatusCode;
+
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use serde_json::Value;
@@ -50,6 +52,7 @@ enum UpdateType {
     Major,
     Minor, // Using Minor instead of Feature for conventional naming
     Patch,
+    Current,
 }
 fn update_tauri_config_endpoint(
     config_path: &str,
@@ -71,6 +74,16 @@ fn update_tauri_config_endpoint(
 
     Ok(())
 }
+
+macro_rules! exit_with_error {
+    ($config_path:expr, $current_version:expr) => {{
+        println!("Error occurred in file: {}, line: {}", file!(), line!());
+        let result = reset_version_in_config($config_path, $current_version);
+        std::process::exit(1);
+    }};
+}
+
+
 
 fn read_and_update_version<P: AsRef<Path>>(
     path: P,
@@ -119,6 +132,9 @@ fn update_version(current_version: &str, update_type: UpdateType) -> Result<Stri
         }
         UpdateType::Patch => {
             segments[2] += 1; // Increment patch
+        }
+        UpdateType::Current => {
+            segments[2] += 0; // Increment patch
         }
     }
 
@@ -190,6 +206,9 @@ fn read_tauri_config<P: AsRef<Path>>(path: P) -> Result<TauriConfig, Box<dyn std
     Ok(tauri_config)
 }
 
+
+// Assuming the Release struct and create_github_release function are defined elsewhere
+
 async fn get_latest_release(
     github_user_repo: &str,
     new_version: &str,
@@ -202,33 +221,52 @@ async fn get_latest_release(
         github_user_repo
     );
 
+    println!("\nChecking releases at: {}", url);
+
     let response = client
         .get(&url)
-        .header(USER_AGENT, "reqwest")
+        .header("User-Agent", "reqwest")
         .bearer_auth(github_pat)
         .send()
-        .await?
-        .error_for_status()?;
+        .await;
 
-    let release = response.json::<Release>().await?;
+    match response {
+        Ok(resp) => match resp.status() {
+            StatusCode::OK => {
+                let release = resp.json::<Release>().await?;
+                println!("Evaluating Release versions...");
 
-    if new_version == release.name {
-        // Perform the required action if the versions match
-        // Example action: printing a message
-        println!(
-            "New version {} is equal to the latest release name. Performing the required action...",
-            new_version
-        );
-        // You can perform more complex actions here based on your requirements
-        Ok(release)
-    } else {
-        // If the versions don't match, just return the release information
-        println!("New version {} is not equal to the latest release name {}. Returning release information...", new_version, release.name);
-        let release =
-            create_github_release(github_user_repo, new_version, release_notes, github_pat).await?;
-        Ok(release)
+                if new_version == release.name {
+                    println!(
+                        "New version {} is equal to the latest Release name. Using this Release URL for upload...",
+                        new_version
+                    );
+                    Ok(release)
+                } else {
+                    println!(
+                        "New version {} is not equal to the latest release name {}. Creating new Release ...",
+                        new_version, release.name
+                    );
+                    create_github_release(github_user_repo, new_version, release_notes, github_pat).await
+                }
+            },
+            StatusCode::NOT_FOUND => {
+                println!("No existing release found. Creating a new one...");
+                create_github_release(github_user_repo, new_version, release_notes, github_pat).await
+            },
+            _ => Err(format!("Error fetching the latest release: HTTP Status {}", resp.status()).into()),
+        },
+        Err(_e) => {
+            // For simplicity, directly attempt to create a new release if there's an error
+            // You might want to handle different errors differently
+            println!("Error fetching the latest release. Attempting to create a new one...");
+            create_github_release(github_user_repo, new_version, release_notes, github_pat).await
+        },
     }
 }
+
+
+
 
 async fn create_github_release(
     repo: &str,
@@ -299,7 +337,7 @@ async fn upload_release_asset(
         Ok(asset.url) // Return the URL that includes the asset ID
     } else {
         // Handle error response...
-        Err(format!("Failed to upload asset. Status: {}", response.status()).into())
+        Err(format!("Failed to upload asset. Status: {} : You may be trying to overwrite a current arch artifact. Try increase the version number?", response.status()).into())
     }
 }
 
@@ -520,7 +558,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let current_version = tauri_config.package.version; // Use the version from tauri_config
 
-    println!("Enter update type (number):\n[1] Major\n[2] Minor\n[3] patch\n[q] Quit");
+    println!("Enter update type (number):\n[1] Major\n[2] Minor\n[3] Patch\n[4] Current\n[q] Quit");
     let mut update_type_str = String::new();
     io::stdin()
         .read_line(&mut update_type_str)
@@ -529,6 +567,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         "1" => UpdateType::Major,
         "2" => UpdateType::Minor,
         "3" => UpdateType::Patch,
+        "4" => UpdateType::Current,
         "q" => std::process::exit(1),
         _ => {
             println!("Invalid update type. Please enter 'major', 'minor', or 'patch'.");
@@ -597,8 +636,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let stderr = String::from_utf8_lossy(&output.stderr);
         eprintln!("\nError during build process: {}", stderr);
         println!("Ending operation, please fix the error above");
-        reset_version_in_config(config_path, &current_version);
-        std::process::exit(1);
+        
+        exit_with_error!(config_path,&current_version);
     }
 
     // Change back to the original directory if needed
@@ -652,7 +691,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let github_user_repo = format!("{}/{}", github_username, github_repo);
 
+    println!("GitHub User/Repo : {}",github_user_repo);
+
     let release_notes = update_notes_str.trim().to_string();
+
 
     let release =
         get_latest_release(&github_user_repo, &new_version, &release_notes, &github_pat).await?;
@@ -686,8 +728,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await
         {
             eprintln!("Error updating gist: {}", e);
-            reset_version_in_config(config_path, &current_version);
-            std::process::exit(1);
+            exit_with_error!(config_path,&current_version);
         } else {
             println!("Gist updated successfully");
         }
@@ -721,8 +762,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let key_path = ["gist_id"];
                 if let Err(e) = update_entry_in_config(config_path, &key_path, &gist_id) {
                     eprintln!("Error updating configuration: {}", e);
-                    reset_version_in_config(tauri_config_path, &current_version);
-                    std::process::exit(1);
+                    exit_with_error!(config_path,&current_version);
                 } else {
                     println!("Configuration updated successfully.");
                 }
@@ -730,8 +770,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             Err(e) => {
                 eprintln!("Error creating gist: {}", e);
 
-                reset_version_in_config(tauri_config_path, &current_version);
-                std::process::exit(1);
+                exit_with_error!(config_path,&current_version);
             }
         }
     }
@@ -740,7 +779,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     //     eprintln!("Error updating gist: {}", e);
     // }
 
-    println!("Updated Version to : {}", new_version.to_string());
+    println!("Updated Version to : {:?}", new_version.to_string());
 
     println!("\n-End of process -\n");
     Ok(())
@@ -820,7 +859,7 @@ async fn fetch_and_update_gist(
                 .into());
             }
         } else {
-            return Err("update_info.json file content not found".into());
+            return Err("file content not found".into());
         }
     } else {
         return Err("File not found in the gist".into());
