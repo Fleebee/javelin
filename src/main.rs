@@ -523,6 +523,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let operating_system = env::consts::OS;
     let architecture = env::consts::ARCH;
 
+
+    
+    println!("OS  : {}", operating_system);
+    println!("Arch  : {}", architecture);
+
     let platform_key = match (operating_system, architecture) {
         ("macos", "aarch64") => "darwin-aarch64",
         ("macos", _) => "darwin-x86_64",
@@ -533,8 +538,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             operating_system, architecture
         ),
     };
-    println!("OS  : {}", operating_system);
-    println!("Arch  : {}", architecture);
     println!("Platform Key : {}", platform_key);
 
     println!("\n");
@@ -591,11 +594,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Attempt to expand the home directory in the path
 
-    let secret_key_path = match platform_key {
+    let secret_key_path = match operating_system {
         "macos" | "linux" => shellexpand::tilde(&config.secret_key_location).into_owned(),
         "windows" => config.secret_key_location.clone(),
         _ => panic!("Unsupported platform"),
     };
+
+    println!{"{}",&secret_key_path};
 
     let secret_key_content =
         fs::read_to_string(secret_key_path).expect("Failed to read secret key file");
@@ -618,13 +623,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("Starting build...");
 
+
+    
     let current_dir = env::current_dir()?;
 
+
+    if operating_system == "windows" {
+        // Run `tauri build` command
+    let output = Command::new("npm run tauri")
+    .arg("build")
+    .current_dir("..") //Need to remove escape if installed as CLT
+    .output()?;
+
+    } else {
     // Run `tauri build` command
     let output = Command::new("tauri")
         .arg("build")
         .current_dir("..") //Need to remove escape if installed as CLT
         .output()?;
+    }
 
     if output.status.success() {
         let stdout = String::from_utf8_lossy(&output.stdout);
