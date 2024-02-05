@@ -1,15 +1,15 @@
-#Tauri Javelin
+# Tauri Javelin
 
-##Summary
+## Summary
 This tool was created to assist in github version releases.
 It is a command line tool for automatic building, deploying and updating of a Tauri application.
 
-#Aim
+## Aim
 Integrate Tauri and Github as a solution to specify the version update type - Major, Minor, Patch and update the version record before uploading the artfacts and updating the update manifest.
 An attempt to reduce the amount and location points of data entries and manual updates.
 
 
-The steps are:
+### The steps are:
 - Read configuration from the tauri_javelin.conf.json file
 - Increment the version number of the application by defining the update type
 - Obtain the secret key and password from a defined location and write into the system ENV
@@ -20,7 +20,7 @@ The steps are:
 - update the Github gist static json file with : Version, release url, signature, release notes
 
 
-#Pre-requisites
+## Pre-requisites
 - The package should be run from the root directory of a Tauri application
 - The Tauri project should have an existing git repo
 - There should be a gist already created  //may be able to automate this too
@@ -28,7 +28,7 @@ The steps are:
 - You must have generated a secret and public key in accordance with the Tauri documentation
 
 
-#Instructions
+## Instructions
 
 [tauri.conf.json][updater]
 - endpoints should be set to ["https://gist.github.com/{YOUR_GIT_USERNAME}/{YOUR_GIST_ID}/raw"]
