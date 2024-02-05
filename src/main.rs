@@ -523,8 +523,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let operating_system = env::consts::OS;
     let architecture = env::consts::ARCH;
 
-
-    
     println!("OS  : {}", operating_system);
     println!("Arch  : {}", architecture);
 
@@ -600,7 +598,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         _ => panic!("Unsupported platform"),
     };
 
-    println!{"{}",&secret_key_path};
+    println! {"{}",&secret_key_path};
 
     let secret_key_content =
         fs::read_to_string(secret_key_path).expect("Failed to read secret key file");
@@ -623,10 +621,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("Starting build...");
 
-
-    
     let current_dir = env::current_dir()?;
-
 
     let output = if cfg!(target_os = "windows") {
         println!("Os Check : Windows");
@@ -649,11 +644,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let stdout = String::from_utf8_lossy(&output.stdout);
         println!("Success: {}", stdout);
 
-        // Construct the path to the signature file // Need to change this after install as CLT
+        // // Construct the path to the signature file // Need to change this after install as CLT
+        // let sig_file_path = format!(
+        //     "../src-tauri/target/release/bundle/macos/{}.app.tar.gz.sig",
+        //     tauri_config.package.productName
+        // );
+
+        #[cfg(target_os = "windows")]
+        let sig_file_path = format!(
+            "..\\target\\release\\bundle\\msi\\{}.msi.zip.sig",
+            tauri_config.package.productName
+        );
+
+        #[cfg(target_os = "macos")]
         let sig_file_path = format!(
             "../src-tauri/target/release/bundle/macos/{}.app.tar.gz.sig",
             tauri_config.package.productName
         );
+
+        // Similarly, you can add paths for other OSes as needed
+
         println!("Attempting to read Signature file path : {}", sig_file_path);
         // Read the signature file
         sig_content = fs::read_to_string(&sig_file_path).expect("Failed to read signature file");
