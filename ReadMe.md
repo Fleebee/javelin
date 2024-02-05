@@ -8,7 +8,7 @@ It is a command line tool for automatic building, deploying and updating of a Ta
 ## Aim
 
 Integrate Tauri and Github as a solution to specify the version update type - Major, Minor, Patch and update the version record before uploading the artfacts and updating the update manifest.
-An attempt to reduce the amount and location points of data entries and manual updates.
+Reduce the points of data entries and manual updates when using git to handle releases.
 
 ### The automated steps are:
 
@@ -23,11 +23,11 @@ An attempt to reduce the amount and location points of data entries and manual u
 
 ## Pre-requisites
 
-- The package should be run from the root directory of a Tauri application
-- The Tauri project should have an existing git repo
-- There should be a gist already created //may be able to automate this too
-- You must have a Git PAT key
-- You must have generated a secret and public key in accordance with the Tauri documentation
+- [Required] The package should be run from the root directory of a Tauri application
+- [Required] The Tauri project should have an existing git repo
+- [Optional] An existing Gist code
+- You must have a Git PAT key [If Tauri Project is in a Private Repo]
+- [Required] You must have generated a secret and public key in accordance with the Tauri documentation
 
 ## Instructions
 
@@ -45,8 +45,11 @@ An attempt to reduce the amount and location points of data entries and manual u
 - The Gist ID will be added to tauri_javelin.conf.json and the full Gist url will be added to [tauri.conf.json][updater]
 - endpoints should be automatically set to ["https://gist.github.com/{YOUR_GIT_USERNAME}/{YOUR_GIST_ID}/raw"]
 - The release will be available to your users (this may take a minute or two to propogate)
-
 - Errors should show in the terminal output if any
+
+## Considerations
+
+- This tool will push to Private repos with a valid PAT key, but your deployed applicaiton will not be able to download from a private repo. This should be handled by overiding the Bearer Header in your Tauri application.
 
 ## Known issues
 
