@@ -1,6 +1,6 @@
 #Tauri Javelin
 
-#Summary
+##Summary
 This tool was created to assist in github version releases.
 It is a command line tool for automatic building, deploying and updating of a Tauri application.
 
