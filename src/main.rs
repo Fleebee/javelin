@@ -628,20 +628,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let current_dir = env::current_dir()?;
 
 
-    if operating_system == "windows" {
-        // Run `tauri build` command
-    let output = Command::new("npm run tauri")
-    .arg("build")
-    .current_dir("..") //Need to remove escape if installed as CLT
-    .output()?;
-
+    let output = if cfg!(target_os = "windows") {
+        println!("Os Check : Windows");
+        // On Windows, use `cmd /c` to run `npm run tauri build`
+        Command::new("cmd")
+            .args(&["/C", "npm run tauri", "build"])
+            .current_dir("..")
+            .output()?
     } else {
-    // Run `tauri build` command
-    let output = Command::new("tauri")
-        .arg("build")
-        .current_dir("..") //Need to remove escape if installed as CLT
-        .output()?;
-    }
+        println!("Os Check : MacOs or Linux");
+
+        // Directly use `tauri` command on other operating systems
+        Command::new("tauri")
+            .arg("build")
+            .current_dir("..")
+            .output()?
+    };
 
     if output.status.success() {
         let stdout = String::from_utf8_lossy(&output.stdout);

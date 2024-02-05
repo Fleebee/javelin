@@ -1,14 +1,15 @@
-# Tauri Javelin
+# Javelin for Tauri
 
 ## Summary
 
 This tool was created to assist in github version releases.
-It is a command line tool for automatic building, deploying and updating of a Tauri application.
+It is a command line tool for automatic building, deploying and updating the manifest of a Tauri application.
 
 ## Aim
 
-Integrate Tauri and Github as a solution to specify the version update type - Major, Minor, Patch and update the version record before uploading the artfacts and updating the update manifest.
-Reduce the points of data entries and manual updates when using git to handle releases.
+I wanted a method to use Github to host the releases and manifest but didnt like the faff of signing, manual uploads and release creation.
+The work I do requires multi plat always , so needed something painless (and free) to specify Major, Minor, Patch updates
+
 
 ### The automated steps are:
 
@@ -50,9 +51,14 @@ Reduce the points of data entries and manual updates when using git to handle re
 ## Considerations
 
 - This tool will push to Private repos with a valid PAT key, but your deployed applicaiton will not be able to download from a private repo. This should be handled by overiding the Bearer Header in your Tauri application.
+- Each OS type will create an individual manifest.json file but can share Release versions nd upload their own artifacts. This is because there were issues when the manifest version was updated for a platform, every platform considered there to be a new version. It can be done but considering the manifest wouldnt track all version numbers it became less important to fix it. 
 
 ## Known issues
 
 - If you try to deploy an existing version number for an existing OS, you will get an error Status: 422 Unprocessable Entity
-- This can be fixed in future with a delete fn for the existing asset, for now you can either manually remove the asset in Fithub releases, or deploy a different version number.
+- This can be fixed in future with a delete function for the existing asset, for now you can either manually remove the asset in Github releases, or deploy a different version number.
 - Other issues to be added...
+
+
+### Please note, this application is not created by or endorsed by TAURI. It is intended for use to automate some deployment tasks.
+### “TAURI is a trademark of The Tauri Programme within the Commons Conservancy. [https://tauri.app/]”
