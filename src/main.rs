@@ -83,8 +83,6 @@ macro_rules! exit_with_error {
     }};
 }
 
-
-
 fn read_and_update_version<P: AsRef<Path>>(
     path: P,
     update_type: UpdateType,
@@ -206,7 +204,6 @@ fn read_tauri_config<P: AsRef<Path>>(path: P) -> Result<TauriConfig, Box<dyn std
     Ok(tauri_config)
 }
 
-
 // Assuming the Release struct and create_github_release function are defined elsewhere
 
 async fn get_latest_release(
@@ -247,26 +244,29 @@ async fn get_latest_release(
                         "New version {} is not equal to the latest release name {}. Creating new Release ...",
                         new_version, release.name
                     );
-                    create_github_release(github_user_repo, new_version, release_notes, github_pat).await
+                    create_github_release(github_user_repo, new_version, release_notes, github_pat)
+                        .await
                 }
-            },
+            }
             StatusCode::NOT_FOUND => {
                 println!("No existing release found. Creating a new one...");
-                create_github_release(github_user_repo, new_version, release_notes, github_pat).await
-            },
-            _ => Err(format!("Error fetching the latest release: HTTP Status {}", resp.status()).into()),
+                create_github_release(github_user_repo, new_version, release_notes, github_pat)
+                    .await
+            }
+            _ => Err(format!(
+                "Error fetching the latest release: HTTP Status {}",
+                resp.status()
+            )
+            .into()),
         },
         Err(_e) => {
             // For simplicity, directly attempt to create a new release if there's an error
             // You might want to handle different errors differently
             println!("Error fetching the latest release. Attempting to create a new one...");
             create_github_release(github_user_repo, new_version, release_notes, github_pat).await
-        },
+        }
     }
 }
-
-
-
 
 async fn create_github_release(
     repo: &str,
@@ -590,7 +590,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut sig_content = String::new();
 
     // Attempt to expand the home directory in the path
-    let secret_key_path = shellexpand::tilde(&config.secret_key_location).into_owned();
+
+    let secret_key_path = match platform_key {
+        "macos" | "linux" => shellexpand::tilde(&config.secret_key_location).into_owned(),
+        "windows" => config.secret_key_location.clone(),
+        _ => panic!("Unsupported platform"),
+    };
+
     let secret_key_content =
         fs::read_to_string(secret_key_path).expect("Failed to read secret key file");
 
@@ -636,8 +642,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let stderr = String::from_utf8_lossy(&output.stderr);
         eprintln!("\nError during build process: {}", stderr);
         println!("Ending operation, please fix the error above");
-        
-        exit_with_error!(config_path,&current_version);
+
+        exit_with_error!(config_path, &current_version);
     }
 
     // Change back to the original directory if needed
@@ -691,10 +697,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let github_user_repo = format!("{}/{}", github_username, github_repo);
 
-    println!("GitHub User/Repo : {}",github_user_repo);
+    println!("GitHub User/Repo : {}", github_user_repo);
 
     let release_notes = update_notes_str.trim().to_string();
-
 
     let release =
         get_latest_release(&github_user_repo, &new_version, &release_notes, &github_pat).await?;
@@ -728,7 +733,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await
         {
             eprintln!("Error updating gist: {}", e);
-            exit_with_error!(config_path,&current_version);
+            exit_with_error!(config_path, &current_version);
         } else {
             println!("Gist updated successfully");
         }
@@ -762,7 +767,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let key_path = ["gist_id"];
                 if let Err(e) = update_entry_in_config(config_path, &key_path, &gist_id) {
                     eprintln!("Error updating configuration: {}", e);
-                    exit_with_error!(config_path,&current_version);
+                    exit_with_error!(config_path, &current_version);
                 } else {
                     println!("Configuration updated successfully.");
                 }
@@ -770,7 +775,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             Err(e) => {
                 eprintln!("Error creating gist: {}", e);
 
-                exit_with_error!(config_path,&current_version);
+                exit_with_error!(config_path, &current_version);
             }
         }
     }

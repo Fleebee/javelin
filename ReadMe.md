@@ -26,7 +26,7 @@ Reduce the points of data entries and manual updates when using git to handle re
 - [Required] The package should be run from the root directory of a Tauri application
 - [Required] The Tauri project should have an existing git repo
 - [Optional] An existing Gist code
-- You must have a Git PAT key [If Tauri Project is in a Private Repo]
+- [Required] You must have a Git PAT key
 - [Required] You must have generated a secret and public key in accordance with the Tauri documentation
 
 ## Instructions
@@ -53,6 +53,6 @@ Reduce the points of data entries and manual updates when using git to handle re
 
 ## Known issues
 
-- If you try ro deploy an existing version number for an existing OS, you will get an error Status: 422 Unprocessable Entity
+- If you try to deploy an existing version number for an existing OS, you will get an error Status: 422 Unprocessable Entity
 - This can be fixed in future with a delete fn for the existing asset, for now you can either manually remove the asset in Fithub releases, or deploy a different version number.
 - Other issues to be added...
