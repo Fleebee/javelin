@@ -1,3 +1,4 @@
 /javelin.conf.json
 /target
 deployment.txt
+/.env
