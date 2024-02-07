@@ -1,19 +1,19 @@
-# Javelin for Tauri
+# Javelin for TAURI
 
 ## Summary
 
 This tool was created to assist in github version releases.
-It is a command line tool for automatic building, deploying and updating the manifest of a Tauri application.
+It is a command line tool for automatic building, deploying and updating the manifest of a TAURI application.
 
 ## Aim
 
-I wanted a method to use Github to host the releases and manifest but didnt like the faff of signing, manual uploads and release creation.
-The work I do requires multi plat always , so needed something painless (and free) to specify Major, Minor, Patch updates
+I wanted a method to use Github to host the releases and manifest but didnt like the task of signing, manual uploads and release creation each time.
+The work I do requires multi plat always , so needed something painless to specify Major, Minor, Patch updates
 
 
 ### The automated steps are:
 
-- Read configuration from the tauri_javelin.conf.json file
+- Read configuration from the javelin.conf.json file
 - Increment the version number of the application by defining the update type in the CLI
 - Obtain the secret key and password from a defined filepath on host machine and write into the system ENV
 - Trigger the tauri build command
@@ -33,17 +33,17 @@ The work I do requires multi plat always , so needed something painless (and fre
 ## Instructions
 
 - The repo should be cloned into the root dir of your Tauri project, next to src-tauri
-- Inside the tauri_javelin folder , rename sample_tauri_javelin.conf.json to tauri_javelin.conf.json
+- Inside the tauri_javelin folder , rename sample_javelin.conf.json to javelin.conf.json
 - All fields in tauri_javelin.conf.json are required except for gist_id - this will be created if blank
 - You must create a key pair [secret/pub] you can do this by following the instructions in the Tauri docs for Updater
-- From a terminal while in the tauri_javelin dir, run 'cargo run'
+- From a terminal while in the javelin dir, run 'cargo run'
 - Type the type of update you will be performing and press Enter, this will increae a digit in the version number
 - Type your update description and press enter - this is added to the Release description and Gist
 
 - The application will run the build command automatically
 - The version number in your tauri.conf.json file will be incremented
 - The github release will be created and your bundle file uploaded and gist will be created and populated with System OS, signing key and Release url
-- The Gist ID will be added to tauri_javelin.conf.json and the full Gist url will be added to [tauri.conf.json][updater]
+- The Gist ID will be added to javelin.conf.json and the full Gist url will be added to [tauri.conf.json][updater]
 - endpoints should be automatically set to ["https://gist.github.com/{YOUR_GIT_USERNAME}/{YOUR_GIST_ID}/raw"]
 - The release will be available to your users (this may take a minute or two to propogate)
 - Errors should show in the terminal output if any
