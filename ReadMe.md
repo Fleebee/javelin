@@ -43,7 +43,7 @@ The work I do requires multi plat always , so needed something painless to speci
 
 - The repo should be cloned into the root dir of your Tauri project, next to src-tauri
 - Inside the javelin folder , rename sample_javelin.conf.json to javelin.conf.json
-- All fields in tauri_javelin.conf.json are required except for gist_id - this will be created if blank
+- All fields in javelin.conf.json are required except for gist_id - this will be created if blank
 - You must create a key pair [secret/pub] you can do this by following the instructions in the Tauri docs for Updater
 - From a terminal while in the javelin dir, run 'cargo run'
 - Type the type of update you will be performing and press Enter, this will increae a digit in the version number
@@ -64,8 +64,9 @@ The work I do requires multi plat always , so needed something painless to speci
 
 ## Known issues
 
-- If you try to deploy an existing version number for an existing OS, you will get an error Status: 422 Unprocessable Entity
-- This can be fixed in future with a delete function for the existing asset, for now you can either manually remove the asset in Github releases, or deploy a different version number.
+- If you try to deploy an existing version number for an existing OS, you will get an error Status: 422 Unprocessable Entity. This can be fixed in future with a delete function for the existing asset, for now you can either manually remove the asset in Github releases, or deploy a different version number.
+- The gist_id check occurs after build, the config is then updated. The first version is released without manifest info . This can be fixed by moving the gist_id check and creation earlier up the chain.
+
 - Other issues to be added...
 
 ### Please note, this application is not created by or endorsed by TAURI. It is intended for use to automate some deployment tasks.
