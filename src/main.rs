@@ -218,7 +218,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ),
         "windows" => format!(
             "..\\src-tauri\\target\\release\\bundle\\msi\\{}_{}_x64_en-US.msi.zip",
-            tauri_config.package.productName, current_version
+            tauri_config.package.productName, &new_version
         ),
         "linux" => format!(
             "../src-tauri/target/release/bundle/appimage/{}.AppImage.tar.gz", // Assuming you're using deb for Linux
@@ -248,7 +248,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         "macos" => format!("{}.app.tar.gz", tauri_config.package.productName),
         "windows" => format!(
             "{}_{}_x64_en-US.msi.zip",
-            tauri_config.package.productName, current_version
+            tauri_config.package.productName, new_version
         ),
         "linux" => format!(
             "{}.AppImage.tar.gz", // Assuming you're using deb for Linux
