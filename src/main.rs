@@ -1,38 +1,22 @@
 use chrono::Utc;
-
 use std::collections::HashMap;
-use std::io::{self, Write};
+use std::io::{self};
 use std::process::Command;
 use std::{env, fs, path::Path};
-
 mod utilities;
 use utilities::UpdateType;
 use utilities::{
-    read_and_update_version, read_config, read_tauri_config, reset_version_in_config,
+    read_and_update_version, read_config, read_tauri_config, read_value, reset_version_in_config,
     update_entry_in_config,
 };
-
 mod github;
 use github::{
-    create_and_upload_gist, fetch_and_update_gist, get_matching_release,
-    upload_release_asset,
+    create_and_upload_gist, fetch_and_update_gist, get_matching_release, upload_release_asset,
 };
 use github::{GistContent, PlatformDetail};
 
-// Assuming the Release struct and create_github_release function are defined elsewhere
-// Function to read value from user input if empty
-fn read_value(prompt: &str, value: &mut String) {
-    if value.trim().is_empty() {
-        print!("{} empty, Enter {}: ", prompt, prompt);
-        io::stdout().flush().unwrap();
-        io::stdin().read_line(value).expect("Failed to read input");
-    }
-    *value = value.trim_end_matches('\n').to_string(); // Remove trailing newline
-}
-
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-
     println!("\nJAVELIN\n");
     println!("Auto Updater for TAURI");
     println!("-----------------------\n");
@@ -71,7 +55,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut secret_key_password = config.secret_key_password;
 
     let current_version = tauri_config.package.version; // Use the version from tauri_config
-    println!("Current Tauri App Version : {}\n",&current_version);
+    println!("Current Tauri App Version : {}\n", &current_version);
 
     let gist_empty = github_gist.trim().is_empty();
 
@@ -85,29 +69,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     if let Err(e) = update_entry_in_config(config_path, &["github_username"], &github_username) {
         eprintln!("Error updating configuration: {}", e);
         exit_with_error!(config_path, &current_version);
-    } else {
-        println!("Configuration updated successfully.");
     }
 
     if let Err(e) = update_entry_in_config(config_path, &["github_repo"], &github_repo) {
         eprintln!("Error updating configuration: {}", e);
         exit_with_error!(config_path, &current_version);
-    } else {
-        println!("Configuration updated successfully.");
     }
 
     if let Err(e) = update_entry_in_config(config_path, &["gist_id"], &github_gist) {
         eprintln!("Error updating configuration: {}", e);
         exit_with_error!(config_path, &current_version);
-    } else {
-        println!("Configuration updated successfully.");
     }
 
     if let Err(e) = update_entry_in_config(config_path, &["github_pat"], &github_pat) {
         eprintln!("Error updating configuration: {}", e);
         exit_with_error!(config_path, &current_version);
-    } else {
-        println!("Configuration updated successfully.");
     }
 
     if let Err(e) =
@@ -115,8 +91,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     {
         eprintln!("Error updating configuration: {}", e);
         exit_with_error!(config_path, &current_version);
-    } else {
-        println!("Configuration updated successfully.");
     }
 
     if let Err(e) =
@@ -124,21 +98,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     {
         eprintln!("Error updating configuration: {}", e);
         exit_with_error!(config_path, &current_version);
-    } else {
-        println!("Configuration updated successfully.");
     }
 
     if gist_empty {
-        // Perform actions when github_gist is empty
+        // We create a draft placeholder Gist to populate the Tauri config, so the App ships pointing to the right update location
         println!("Github Gist is empty. Performing actions...");
-        println!("gist_id is empty or not set");
 
         let new_platform_detail = PlatformDetail {
             signature: "".to_string(),
             url: "".to_string(),
         };
 
-        // Handle the case where gist_id is empty or not set
         let gist_content = GistContent {
             version: current_version.to_string(),
             notes: "draft".to_string(),
@@ -159,7 +129,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             tauri_config_path,
         )
         .await;
-
+        // Update the config and pass the gist ID back to main scope
         match gist_id_result {
             Ok(gist_id) => {
                 println!("Gist was successfully created with ID: {}", gist_id);
@@ -174,20 +144,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             Err(e) => {
                 eprintln!("Error creating gist: {}", e);
-
                 exit_with_error!(config_path, &current_version);
             }
         }
-    } else {
-        // Perform actions when github_gist is not empty
-        println!("Github Gist is not empty. Performing actions...");
-        // Your actions here
     }
 
     println!("\n");
-    // println!("{:?}", config); // For debugging purposes
     println!("-[Config Settings]-");
-
     println!("Git Username : {}", github_username);
     println!("Git Repo : {}", github_repo);
     println!("Git Gist ID: {}", github_gist);
@@ -196,11 +159,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Signing Key Password : {}", secret_key_password);
 
     println!("\n");
-    // Proceed with other tasks like version increment, building the app, etc.
     println!("-[Tauri Config]-");
     println!("Product Name : {:?}", tauri_config.package.productName);
     println!("Version : {}", &current_version);
-
     println!("\n");
 
     println!("Enter update type (number):\n[1] Major\n[2] Minor\n[3] Patch\n[4] Current\n[q] Quit");
@@ -274,8 +235,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Err(e) => println!("Couldn't read TAURI_PRIVATE_KEY: {}", e),
     }
 
-    //
-
     println!("\nStarting build...");
 
     let current_dir = env::current_dir()?;
@@ -318,8 +277,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             tauri_config.package.productName
         );
 
-        // Similarly, you can add paths for other OSes as needed
-
         println!("Attempting to read Signature file path : {}", sig_file_path);
         // Read the signature file
         sig_content = fs::read_to_string(&sig_file_path).expect("Failed to read signature file");
@@ -328,7 +285,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let stderr = String::from_utf8_lossy(&output.stderr);
         eprintln!("\nError during build process: {}", stderr);
         println!("Ending operation, please fix the error above");
-
         exit_with_error!(config_path, &current_version);
     }
 
@@ -341,7 +297,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\nCreating Release");
     let operating_system = env::consts::OS;
     println!("Current Operating System : {}", operating_system);
-    // Construct the path to the signature file // Need to change this after install as CLT
+    // Construct the path to the signature file // Need to change (remove ../) this after install as CLT
     let bundle_filepath = match operating_system {
         "macos" => format!(
             "../src-tauri/target/release/bundle/macos/{}.app.tar.gz",
@@ -424,7 +380,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     if !github_gist.trim().is_empty() {
         println!("gist_id exists and is not empty: {}", github_gist);
-        // Proceed with operations that require a valid gist_id
         if let Err(e) = fetch_and_update_gist(
             &github_repo,
             &github_pat,
@@ -443,50 +398,53 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("Gist updated successfully");
         }
     } else {
-        println!("gist_id is empty or not set");
-        // Handle the case where gist_id is empty or not set , THIS SHOULD BE REDUNDANT NOW , checks are done at the start.
-        let gist_content = GistContent {
-            version: new_version.to_string(),
-            notes: update_notes_str.trim().to_string(),
-            pub_date: current_time,
-            platforms: {
-                let mut platforms = HashMap::new();
-                platforms.insert(platform_key.to_string(), new_platform_detail);
-                platforms
-            },
-        };
+        // Handle the case where gist_id is empty or not set , THIS SHOULD BE REDUNDANT NOW
+        // Checks are done at the start so added graceful exit.
+        exit_with_error!(config_path, &current_version);
 
-        let gist_id_result = create_and_upload_gist(
-            &github_repo,
-            &github_username,
-            &github_pat,
-            &gist_content,
-            platform_key,
-            tauri_config_path,
-        )
-        .await;
+        // println!("gist_id is empty or not set");
+        // let gist_content = GistContent {
+        //     version: new_version.to_string(),
+        //     notes: update_notes_str.trim().to_string(),
+        //     pub_date: current_time,
+        //     platforms: {
+        //         let mut platforms = HashMap::new();
+        //         platforms.insert(platform_key.to_string(), new_platform_detail);
+        //         platforms
+        //     },
+        // };
 
-        match gist_id_result {
-            Ok(gist_id) => {
-                println!("Gist was successfully created with ID: {}", gist_id);
-                let key_path = ["gist_id"];
-                if let Err(e) = update_entry_in_config(config_path, &key_path, &gist_id) {
-                    eprintln!("Error updating configuration: {}", e);
-                    exit_with_error!(config_path, &current_version);
-                } else {
-                    println!("Configuration updated successfully.");
-                }
-            }
-            Err(e) => {
-                eprintln!("Error creating gist: {}", e);
+        // let gist_id_result = create_and_upload_gist(
+        //     &github_repo,
+        //     &github_username,
+        //     &github_pat,
+        //     &gist_content,
+        //     platform_key,
+        //     tauri_config_path,
+        // )
+        // .await;
 
-                exit_with_error!(config_path, &current_version);
-            }
-        }
+        // match gist_id_result {
+        //     Ok(gist_id) => {
+        //         println!("Gist was successfully created with ID: {}", gist_id);
+        //         let key_path = ["gist_id"];
+        //         if let Err(e) = update_entry_in_config(config_path, &key_path, &gist_id) {
+        //             eprintln!("Error updating configuration: {}", e);
+        //             exit_with_error!(config_path, &current_version);
+        //         } else {
+        //             println!("Configuration updated successfully.");
+        //         }
+        //     }
+        //     Err(e) => {
+        //         eprintln!("Error creating gist: {}", e);
+
+        //         exit_with_error!(config_path, &current_version);
+        //     }
+        // }
     }
 
     println!("Updated Version to : {:?}", new_version.to_string());
 
-    println!("\n-End of process -\n");
+    println!("\n-End of process -\n--------------------------");
     Ok(())
 }

@@ -2,6 +2,17 @@ use serde::Deserialize;
 use serde_json::Value;
 use std::error::Error;
 use std::{fs, path::Path};
+use std::io::{self, Write};
+
+
+pub fn read_value(prompt: &str, value: &mut String) {
+    if value.trim().is_empty() {
+        print!("{} empty, Enter {}: ", prompt, prompt);
+        io::stdout().flush().unwrap();
+        io::stdin().read_line(value).expect("Failed to read input");
+    }
+    *value = value.trim_end_matches('\n').to_string(); // Remove trailing newline
+}
 
 pub fn update_tauri_config_endpoint(
     config_path: &str,
