@@ -2,7 +2,6 @@ use chrono::Utc;
 use std::collections::HashMap;
 use std::io::{self};
 use std::process::Command;
-use std::thread::current;
 use std::{env, fs, path::Path};
 mod utilities;
 use utilities::UpdateType;
@@ -256,7 +255,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // On Windows, use `cmd /c` to run `npm run tauri build`
         Command::new("cmd")
             .args(["/C", "npm run tauri", "build"])
-            .current_dir(&base_dir)
+            .current_dir(base_dir)
             .output()?
     } else {
         println!("Os Check : MacOs or Linux");
@@ -265,7 +264,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Directly use `tauri` command on other operating systems
         Command::new("tauri")
             .arg("build")
-            .current_dir(&base_dir)
+            .current_dir(base_dir)
             .output()?
     };
 
