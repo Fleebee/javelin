@@ -60,6 +60,7 @@ A command line tool that will ask you for the update type (Major, Minor, Patch) 
 - Inside the javelin folder , rename sample_javelin.conf.json to javelin.conf.json
 - All fields in javelin.conf.json are required except for gist_id - this will be created if blank
 - You must create a key pair [secret/pub] you can do this by following the instructions in the Tauri docs for Updater
+- Any required field not filled at execution will be prompted for input in the CLI
 
 ### Usage
 
@@ -85,9 +86,7 @@ A command line tool that will ask you for the update type (Major, Minor, Patch) 
 ## Known issues
 
 - If you try to deploy an existing version number for an existing OS, you will get an error Status: 422 Unprocessable Entity. This can be fixed in future with a delete function for the existing asset, for now you can either manually remove the asset in Github releases, or deploy a different version number.
-- The gist_id check occurs after build, the config is then updated. The first version is released without manifest info . This can be fixed by moving the gist_id check and creation earlier up the chain.
 
-- Other issues to be added...
 
 ### Please note, this application is not created by or endorsed by TAURI. It is intended for use to automate some deployment tasks.
 

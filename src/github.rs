@@ -6,11 +6,10 @@ use serde_json::Value;
 use std::collections::HashMap;
 use std::error::Error;
 use std::fs::File;
-use std::path::Path;
 use std::io::Read;
+use std::path::Path;
 
 use crate::utilities::update_tauri_config_endpoint;
-
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Asset {
@@ -38,7 +37,7 @@ pub struct PlatformDetail {
     pub url: String,
 }
 
-pub async fn get_latest_release(
+pub async fn get_matching_release(
     github_user_repo: &str,
     new_version: &str,
     release_notes: &str,
@@ -46,11 +45,14 @@ pub async fn get_latest_release(
 ) -> Result<Release, Box<dyn Error>> {
     let client = reqwest::Client::new();
     let url = format!(
-        "https://api.github.com/repos/{}/releases/latest",
-        github_user_repo
+        "https://api.github.com/repos/{}/releases/tags/{}",
+        github_user_repo, new_version
     );
 
-    println!("\nChecking releases at: {}", url);
+    println!("User / Repo Name : {}", &github_user_repo);
+    println!("Tag Name : {}", &new_version);
+
+    println!("\nChecking matching releases at: {}", url);
 
     let response = client
         .get(&url)
@@ -63,7 +65,7 @@ pub async fn get_latest_release(
         Ok(resp) => match resp.status() {
             StatusCode::OK => {
                 let release = resp.json::<Release>().await?;
-                println!("Evaluating Release versions...");
+                println!("Evaluating Release versions...{:?}", release);
 
                 if new_version == release.name {
                     println!(
@@ -99,6 +101,68 @@ pub async fn get_latest_release(
         }
     }
 }
+
+// pub async fn get_latest_release(
+//     github_user_repo: &str,
+//     new_version: &str,
+//     release_notes: &str,
+//     github_pat: &str,
+// ) -> Result<Release, Box<dyn Error>> {
+//     let client = reqwest::Client::new();
+//     let url = format!(
+//         "https://api.github.com/repos/{}/releases/latest",
+//         github_user_repo
+//     );
+
+//     println!("\nChecking releases at: {}", url);
+
+//     let response = client
+//         .get(&url)
+//         .header("User-Agent", "reqwest")
+//         .bearer_auth(github_pat)
+//         .send()
+//         .await;
+
+//     match response {
+//         Ok(resp) => match resp.status() {
+//             StatusCode::OK => {
+//                 let release = resp.json::<Release>().await?;
+//                 println!("Evaluating Release versions...");
+
+//                 if new_version == release.name {
+//                     println!(
+//                         "New version {} is equal to the latest Release name. Using this Release URL for upload...",
+//                         new_version
+//                     );
+//                     Ok(release)
+//                 } else {
+//                     println!(
+//                         "New version {} is not equal to the latest release name {}. Creating new Release ...",
+//                         new_version, release.name
+//                     );
+//                     create_github_release(github_user_repo, new_version, release_notes, github_pat)
+//                         .await
+//                 }
+//             }
+//             StatusCode::NOT_FOUND => {
+//                 println!("No existing release found. Creating a new one...");
+//                 create_github_release(github_user_repo, new_version, release_notes, github_pat)
+//                     .await
+//             }
+//             _ => Err(format!(
+//                 "Error fetching the latest release: HTTP Status {}",
+//                 resp.status()
+//             )
+//             .into()),
+//         },
+//         Err(_e) => {
+//             // For simplicity, directly attempt to create a new release if there's an error
+//             // You might want to handle different errors differently
+//             println!("Error fetching the latest release. Attempting to create a new one...");
+//             create_github_release(github_user_repo, new_version, release_notes, github_pat).await
+//         }
+//     }
+// }
 
 pub async fn create_github_release(
     repo: &str,
@@ -249,7 +313,6 @@ pub async fn fetch_and_update_gist(
     new_pub_date: &str,
     platform_key: &str,
     new_platform_detail: PlatformDetail,
-   
 ) -> Result<(), Box<dyn Error>> {
     let client = reqwest::Client::new();
     // Fetch the gist
@@ -319,6 +382,11 @@ pub async fn fetch_and_update_gist(
     } else {
         return Err("File not found in the gist".into());
     }
+    // let gist_updater_endpoint = format!(
+    //     "https://gist.github.com/{}/{}/raw",
+    //     github_username, gist_id
+    // );
+    // update_tauri_config_endpoint(tauri_config_path, &gist_updater_endpoint)?;
 
     Ok(())
 }
