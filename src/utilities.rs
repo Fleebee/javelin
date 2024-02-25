@@ -1,9 +1,35 @@
 use serde::Deserialize;
-use serde_json::Value;
+use serde_json::{Value,json};
 use std::error::Error;
-use std::{fs, path::Path};
+use std::{fs,fs::File, path::Path};
 use std::io::{self, Write};
 
+
+pub fn create_default_config_if_not_exists(config_path: &str) -> Result<(), io::Error> {
+    // Check if the file already exists
+    if Path::new(config_path).exists() {
+        println!("Config file found");
+        return Ok(());
+    }
+
+    // Create a JSON object with the default configuration
+    let default_config = json!({
+        "gist_id": "",
+        "github_pat": "",
+        "github_repo": "",
+        "github_username": "",
+        "secret_key_location": "",
+        "secret_key_password": "",
+    });
+
+    // Open the file in write mode and write the JSON content to it
+    let mut file = File::create(config_path)?;
+    file.write_all(serde_json::to_string_pretty(&default_config).unwrap().as_bytes())?;
+
+    println!("Config file created at {}", config_path);
+
+    Ok(())
+}
 
 pub fn read_value(prompt: &str, value: &mut String) {
     if value.trim().is_empty() {
@@ -105,19 +131,23 @@ pub fn update_version(
 pub fn reset_version_in_config(
     config_path: &str,
     reset_version: &str,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<(), Box<dyn Error>> {
     // Read the current configuration
     let config_contents = fs::read_to_string(config_path)?;
     let mut config: Value = serde_json::from_str(&config_contents)?;
 
-    // Assuming the version is at the root of the JSON structure
-    if let Some(obj) = config.as_object_mut() {
-        obj.insert(
-            "version".to_string(),
-            Value::String(reset_version.to_string()),
-        );
+    // Assuming the version is under "package" object
+    if let Some(package) = config["package"].as_object_mut() {
+        if let Some(version) = package.get_mut("version") {
+            match version {
+                Value::String(version_str) => *version_str = reset_version.to_string(),
+                _ => return Err("Failed to update version: 'version' field is not a string".into()),
+            }
+        } else {
+            return Err("Failed to update version: 'version' field not found".into());
+        }
     } else {
-        return Err("Expected a JSON object at the root of the configuration".into());
+        return Err("Failed to update version: 'package' object not found".into());
     }
 
     // Write the updated configuration back to the file

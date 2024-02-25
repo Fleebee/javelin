@@ -2,12 +2,13 @@ use chrono::Utc;
 use std::collections::HashMap;
 use std::io::{self};
 use std::process::Command;
+use std::thread::current;
 use std::{env, fs, path::Path};
 mod utilities;
 use utilities::UpdateType;
 use utilities::{
-    read_and_update_version, read_config, read_tauri_config, read_value, reset_version_in_config,
-    update_entry_in_config,
+    create_default_config_if_not_exists, read_and_update_version, read_config, read_tauri_config,
+    read_value, reset_version_in_config, update_entry_in_config,
 };
 mod github;
 use github::{
@@ -17,9 +18,12 @@ use github::{GistContent, PlatformDetail};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let base_dir = if cfg!(debug_assertions) { ".." } else { "." };
     println!("\nJAVELIN\n");
     println!("Auto Updater for TAURI");
     println!("-----------------------\n");
+    println!("{}", &base_dir);
+
     let operating_system = env::consts::OS;
     let architecture = env::consts::ARCH;
 
@@ -38,13 +42,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
     println!("Platform Key : {}", platform_key);
 
-    println!("\nChecking config variables...");
+    println!("\nChecking config variables");
     println!("You will be asked to enter any missing requirements\n");
 
+    let tauri_config_path = format!("{}/src-tauri/tauri.conf.json", base_dir);
+    if !Path::new(&tauri_config_path).exists() {
+        eprintln!("Error: Tauri config file not found at {}, are you in the project root?", &tauri_config_path);
+        std::process::exit(1); // Quit the program with an error code
+    }
+    let tauri_config = read_tauri_config(&tauri_config_path)?;
+
     let config_path = "javelin.conf.json"; // Adjust the path as necessary
+    create_default_config_if_not_exists(config_path)?;
     let config = read_config(config_path)?;
-    let tauri_config_path = "../src-tauri/tauri.conf.json";
-    let tauri_config = read_tauri_config(tauri_config_path)?;
+    
     // let public_key = tauri_config.tauri.updater.pubkey;
 
     let mut github_username = config.github_username;
@@ -68,41 +79,41 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     if let Err(e) = update_entry_in_config(config_path, &["github_username"], &github_username) {
         eprintln!("Error updating configuration: {}", e);
-        exit_with_error!(config_path, &current_version);
+        exit_with_error!(&tauri_config_path, &current_version);
     }
 
     if let Err(e) = update_entry_in_config(config_path, &["github_repo"], &github_repo) {
         eprintln!("Error updating configuration: {}", e);
-        exit_with_error!(config_path, &current_version);
+        exit_with_error!(&tauri_config_path, &current_version);
     }
 
     if let Err(e) = update_entry_in_config(config_path, &["gist_id"], &github_gist) {
         eprintln!("Error updating configuration: {}", e);
-        exit_with_error!(config_path, &current_version);
+        exit_with_error!(&tauri_config_path, &current_version);
     }
 
     if let Err(e) = update_entry_in_config(config_path, &["github_pat"], &github_pat) {
         eprintln!("Error updating configuration: {}", e);
-        exit_with_error!(config_path, &current_version);
+        exit_with_error!(&tauri_config_path, &current_version);
     }
 
     if let Err(e) =
         update_entry_in_config(config_path, &["secret_key_location"], &secret_key_location)
     {
         eprintln!("Error updating configuration: {}", e);
-        exit_with_error!(config_path, &current_version);
+        exit_with_error!(&tauri_config_path, &current_version);
     }
 
     if let Err(e) =
         update_entry_in_config(config_path, &["secret_key_password"], &secret_key_password)
     {
         eprintln!("Error updating configuration: {}", e);
-        exit_with_error!(config_path, &current_version);
+        exit_with_error!(&tauri_config_path, &current_version);
     }
 
     if gist_empty {
         // We create a draft placeholder Gist to populate the Tauri config, so the App ships pointing to the right update location
-        println!("Github Gist is empty. Performing actions...");
+        println!("Github Gist is empty. Performing actions");
 
         let new_platform_detail = PlatformDetail {
             signature: "".to_string(),
@@ -126,7 +137,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             &github_pat,
             &gist_content,
             platform_key,
-            tauri_config_path,
+            &tauri_config_path,
         )
         .await;
         // Update the config and pass the gist ID back to main scope
@@ -137,14 +148,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let key_path = ["gist_id"];
                 if let Err(e) = update_entry_in_config(config_path, &key_path, &github_gist) {
                     eprintln!("Error updating configuration: {}", e);
-                    exit_with_error!(config_path, &current_version);
+                    exit_with_error!(&tauri_config_path, &current_version);
                 } else {
                     println!("Configuration updated successfully.");
                 }
             }
             Err(e) => {
-                eprintln!("Error creating gist: {}", e);
-                exit_with_error!(config_path, &current_version);
+                eprintln!("\n\nError creating gist (Check Git credentials): {}", e);
+                exit_with_error!(&tauri_config_path, &current_version);
             }
         }
     }
@@ -182,7 +193,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     println!(
-        "Please type your update notes for the {:?} update...",
+        "Please type your update notes for the {:?} update",
         &update_type
     );
     let mut update_notes_str = String::new();
@@ -203,7 +214,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Update notes: {}", update_notes_str);
     println!("--------");
 
-    let new_version = read_and_update_version(tauri_config_path, update_type)?;
+    let new_version = read_and_update_version(&tauri_config_path, update_type)?;
 
     #[allow(unused_assignments)]
     let mut sig_content = String::new();
@@ -235,26 +246,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Err(e) => println!("Couldn't read TAURI_PRIVATE_KEY: {}", e),
     }
 
-    println!("\nStarting build...");
+    println!("\nStarting build");
 
     let current_dir = env::current_dir()?;
 
     let output = if cfg!(target_os = "windows") {
         println!("Os Check : Windows");
-        println!("Building. This may take some time...");
+        println!("Building. This may take some time");
         // On Windows, use `cmd /c` to run `npm run tauri build`
         Command::new("cmd")
             .args(["/C", "npm run tauri", "build"])
-            .current_dir("..")
+            .current_dir(&base_dir)
             .output()?
     } else {
         println!("Os Check : MacOs or Linux");
-        println!("Building. This may take some time...");
+        println!("Building. This may take some time");
 
         // Directly use `tauri` command on other operating systems
         Command::new("tauri")
             .arg("build")
-            .current_dir("..")
+            .current_dir(&base_dir)
             .output()?
     };
 
@@ -263,18 +274,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // println!("\nBuild Success: {}\n", stdout);
         println!("\nBuild Success!\n");
 
-        println!("Constructing Signature file PATH...");
+        println!("Constructing Signature file PATH");
 
         #[cfg(target_os = "windows")]
         let sig_file_path = format!(
-            "..\\src-tauri\\target\\release\\bundle\\msi\\{}_{}_x64_en-US.msi.zip.sig",
-            tauri_config.package.productName, &new_version
+            "{}\\src-tauri\\target\\release\\bundle\\msi\\{}_{}_x64_en-US.msi.zip.sig",
+            &base_dir, tauri_config.package.productName, &new_version
         );
 
         #[cfg(target_os = "macos")]
         let sig_file_path = format!(
-            "../src-tauri/target/release/bundle/macos/{}.app.tar.gz.sig",
-            tauri_config.package.productName
+            "{}/src-tauri/target/release/bundle/macos/{}.app.tar.gz.sig",
+            &base_dir, tauri_config.package.productName
         );
 
         println!("Attempting to read Signature file path : {}", sig_file_path);
@@ -285,7 +296,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let stderr = String::from_utf8_lossy(&output.stderr);
         eprintln!("\nError during build process: {}", stderr);
         println!("Ending operation, please fix the error above");
-        exit_with_error!(config_path, &current_version);
+        exit_with_error!(&tauri_config_path, &current_version);
     }
 
     // Change back to the original directory if needed
@@ -300,16 +311,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Construct the path to the signature file // Need to change (remove ../) this after install as CLT
     let bundle_filepath = match operating_system {
         "macos" => format!(
-            "../src-tauri/target/release/bundle/macos/{}.app.tar.gz",
-            tauri_config.package.productName
+            "{}/src-tauri/target/release/bundle/macos/{}.app.tar.gz",
+            &base_dir, tauri_config.package.productName
         ),
         "windows" => format!(
-            "..\\src-tauri\\target\\release\\bundle\\msi\\{}_{}_x64_en-US.msi.zip",
-            tauri_config.package.productName, &new_version
+            "{}\\src-tauri\\target\\release\\bundle\\msi\\{}_{}_x64_en-US.msi.zip",
+            &base_dir, tauri_config.package.productName, &new_version
         ),
         "linux" => format!(
-            "../src-tauri/target/release/bundle/appimage/{}.AppImage.tar.gz", // Assuming you're using deb for Linux
-            tauri_config.package.productName
+            "{}/src-tauri/target/release/bundle/appimage/{}.AppImage.tar.gz", // Assuming you're using deb for Linux
+            &base_dir, tauri_config.package.productName
         ),
         _ => panic!("Unsupported operating system: {}", operating_system),
     };
@@ -317,16 +328,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let new_filepath = match operating_system {
         "macos" => format!(
-            "../src-tauri/target/release/bundle/macos/{}-{}.app.tar.gz",
-            tauri_config.package.productName, platform_key
+            "{}/src-tauri/target/release/bundle/macos/{}-{}.app.tar.gz",
+            &base_dir, tauri_config.package.productName, platform_key
         ),
         "windows" => format!(
-            "..\\src-tauri\\target\\release\\bundle\\msi\\{}-{}.msi.zip",
-            tauri_config.package.productName, platform_key
+            "{}\\src-tauri\\target\\release\\bundle\\msi\\{}-{}.msi.zip",
+            &base_dir, tauri_config.package.productName, platform_key
         ),
         "linux" => format!(
-            "../src-tauri/target/release/bundle/appimage/{}-{}.AppImage.tar.gz", // Assuming you're using deb for Linux
-            tauri_config.package.productName, platform_key
+            "{}/src-tauri/target/release/bundle/appimage/{}-{}.AppImage.tar.gz", // Assuming you're using deb for Linux
+            &base_dir, tauri_config.package.productName, platform_key
         ),
         _ => panic!("Unsupported operating system: {}", operating_system),
     };
@@ -366,7 +377,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // TODO Add fn to delete existing asset if exists - Kept as warning , no real need to replace versions for specific arch
     println!("Release url : {}", release.upload_url);
 
-    println!("Uploading Release...");
+    println!("Uploading Release");
     let release_asset_url =
         upload_release_asset(&release.upload_url, filename, &github_pat).await?;
 
@@ -393,14 +404,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await
         {
             eprintln!("Error updating gist: {}", e);
-            exit_with_error!(config_path, &current_version);
+            exit_with_error!(&tauri_config_path, &current_version);
         } else {
             println!("Gist updated successfully");
         }
     } else {
         // Handle the case where gist_id is empty or not set , THIS SHOULD BE REDUNDANT NOW
         // Checks are done at the start so added graceful exit.
-        exit_with_error!(config_path, &current_version);
+        exit_with_error!(&tauri_config_path, &current_version);
 
         // println!("gist_id is empty or not set");
         // let gist_content = GistContent {
@@ -430,7 +441,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         //         let key_path = ["gist_id"];
         //         if let Err(e) = update_entry_in_config(config_path, &key_path, &gist_id) {
         //             eprintln!("Error updating configuration: {}", e);
-        //             exit_with_error!(config_path, &current_version);
+        //             exit_with_error!(&tauri_config_path, &current_version);
         //         } else {
         //             println!("Configuration updated successfully.");
         //         }
@@ -438,7 +449,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         //     Err(e) => {
         //         eprintln!("Error creating gist: {}", e);
 
-        //         exit_with_error!(config_path, &current_version);
+        //         exit_with_error!(&tauri_config_path, &current_version);
         //     }
         // }
     }
