@@ -54,7 +54,7 @@ A command line tool that will ask you for the update type (Major, Minor, Patch) 
 
 ## Instructions
 
-### Setup
+### Setup (Rust files)
 
 - The repo should be cloned into the root dir of your Tauri project, next to src-tauri
 - Inside the javelin folder , rename sample_javelin.conf.json to javelin.conf.json
@@ -62,9 +62,23 @@ A command line tool that will ask you for the update type (Major, Minor, Patch) 
 - You must create a key pair [secret/pub] you can do this by following the instructions in the Tauri docs for Updater
 - Any required field not filled at execution will be prompted for input in the CLI
 
+### Setup (Installed)
+- Install the Javelin package and add to source
+- Run with the command 'Javelin' in the root dir of your TAURI project
+- On first run a javelin.conf.json file will be created and prompt for values
+
+{
+  "gist_id": "", // Leave blank unless you have an existing Gist manifest, this wil be created
+  "github_pat": "", // Your Github auth key
+  "github_repo": "", // The Tauri project repo name (Not url)
+  "github_username": "", // Your Github Username
+  "secret_key_location": "", // Path to generated .key file generated according to the Tauri docs
+  "secret_key_password": "", // The password to your key file, leave blank if none
+}
+
 ### Usage
 
-- From a terminal while in the javelin dir, run 'cargo run'
+- From a terminal while in the javelin dir, run 'cargo run' (or from root dir of Tauri project type Javelin if not running from Rust files)
 - Type the type of update you will be performing and press Enter, this will increae a digit in the version number
 - Type your update description and press enter - this is added to the Release description and Gist
 
@@ -82,6 +96,7 @@ A command line tool that will ask you for the update type (Major, Minor, Patch) 
 
 - This tool will push to Private repos with a valid PAT key, but your deployed applicaiton will not be able to download from a private repo. This should be handled by overiding the Bearer Header in your Tauri application.
 - Each OS type will create an individual manifest.json file but can share Release versions nd upload their own artifacts. This is because there were issues when the manifest version was updated for a platform, every platform considered there to be a new version. It can be done but considering the manifest wouldnt track all version numbers it became less important to fix it.
+- If no Gist key is inputted a draft will be created and populated with Release details
 
 ## Known issues
 
