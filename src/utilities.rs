@@ -37,7 +37,7 @@ pub fn read_value(prompt: &str, value: &mut String) {
         io::stdout().flush().unwrap();
         io::stdin().read_line(value).expect("Failed to read input");
     }
-    *value = value.trim_end_matches('\n').to_string(); // Remove trailing newline
+    *value = value.trim().to_string(); // Remove trailing newline
 }
 
 pub fn update_tauri_config_endpoint(
